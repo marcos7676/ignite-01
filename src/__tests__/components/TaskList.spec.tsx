@@ -1,131 +1,89 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import React from 'react';
-import { TaskList } from '../../components/TaskList';
+import { useState } from 'react'
 
-describe('App Page', () => {
-  it('should be able to add a task', async () => {
-    render(<TaskList />);
+import '../styles/tasklist.scss'
 
-    const taskInput = screen.getByPlaceholderText('Adicionar novo todo');
-    const addTaskButton = screen.getByTestId('add-task-button');
+import { FiTrash, FiCheckSquare } from 'react-icons/fi'
 
-    fireEvent.change(taskInput, {
-      target: {
-        value: 'Desafio ReactJS Ignite'
-      }
-    });
-    fireEvent.click(addTaskButton);
+interface Task {
+  id: number;
+  title: string;
+  isComplete: boolean;
+}
 
-    const addedFirstTaskTitle = screen.getByText('Desafio ReactJS Ignite');
+export function TaskList() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
 
-    expect(addedFirstTaskTitle).toHaveTextContent('Desafio ReactJS Ignite');
-    expect(addedFirstTaskTitle.parentElement).not.toHaveClass('completed')
+  function handleCreateNewTask() {
+   if(!newTaskTitle)return;
 
-    fireEvent.change(taskInput, {
-      target: {
-        value: 'Beber água'
-      }
-    });
-    fireEvent.click(addTaskButton);
+   const newTask ={
+    id: Math.random(),
+    title: newTaskTitle,
+    isComplete: false
+   }
+   setTasks(oldState => [...oldState, newTask]);
+   setNewTaskTitle("");
+  }
 
-    const addedSecondTaskTitle = screen.getByText('Beber água');
-
-    expect(addedFirstTaskTitle).toBeInTheDocument();
-    expect(addedFirstTaskTitle).toHaveTextContent('Desafio ReactJS Ignite');
-    expect(addedFirstTaskTitle.parentElement).not.toHaveClass('completed')
-
-    expect(addedSecondTaskTitle).toHaveTextContent('Beber água');
-    expect(addedSecondTaskTitle.parentElement).not.toHaveClass('completed')
-  })
-
-  it('should not be able to add a task with a empty title', () => {
-    render(<TaskList />);
-
-    const addTaskButton = screen.getByTestId('add-task-button');
-
-    fireEvent.click(addTaskButton);
-
-    expect(screen.queryByTestId('task')).not.toBeInTheDocument();
-
-    const taskInput = screen.getByPlaceholderText('Adicionar novo todo');
-
-    fireEvent.change(taskInput, {
-      target: {
-        value: 'Desafio ReactJS Ignite'
-      }
-    });
+  function handleToggleTaskCompletion(id: number) {
+    const selectTasks = tasks.map(task => task.id === id ? {
+      ...task,
+      isComplete: !task.isComplete
+    } : task);
     
-    fireEvent.click(addTaskButton);
+    setTasks(selectTasks)
+  }
 
-    const addedFirstTaskTitle = screen.getByText('Desafio ReactJS Ignite');
+  function handleRemoveTask(id: number) {
+    const filterTasks = tasks.filter(task => task.id !== id);
 
-    expect(addedFirstTaskTitle).toHaveTextContent('Desafio ReactJS Ignite');
-  })
+    setTasks(filterTasks)
+  }
 
-  it('should be able to remove a task', async () => {
-    render(<TaskList />);
+  return (
+    <section className="task-list container">
+      <header>
+        <h2>Minhas tasks</h2>
 
-    const taskInput = screen.getByPlaceholderText('Adicionar novo todo');
-    const addTaskButton = screen.getByTestId('add-task-button');
+        <div className="input-group">
+          <input 
+            type="text" 
+            placeholder="Adicionar novo todo" 
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            value={newTaskTitle}
+          />
+          <button type="submit" data-testid="add-task-button" onClick={handleCreateNewTask}>
+            <FiCheckSquare size={16} color="#fff"/>
+          </button>
+        </div>
+      </header>
 
-    fireEvent.change(taskInput, {
-      target: {
-        value: 'Desafio ReactJS Ignite'
-      }
-    });
-    fireEvent.click(addTaskButton);
+      <main>
+        <ul>
+          {tasks.map(task => (
+            <li key={task.id}>
+              <div className={task.isComplete ? 'completed' : ''} data-testid="task" >
+                <label className="checkbox-container">
+                  <input 
+                    type="checkbox"
+                    readOnly
+                    checked={task.isComplete}
+                    onClick={() => handleToggleTaskCompletion(task.id)}
+                  />
+                  <span className="checkmark"></span>
+                </label>
+                <p>{task.title}</p>
+              </div>
 
-    fireEvent.change(taskInput, {
-      target: {
-        value: 'Beber água'
-      }
-    });
-    fireEvent.click(addTaskButton);
-
-    const addedFirstTaskTitle = screen.getByText('Desafio ReactJS Ignite');
-    const addedSecondTaskTitle = screen.getByText('Beber água');
-
-    expect(addedFirstTaskTitle).toBeInTheDocument()
-    expect(addedSecondTaskTitle).toBeInTheDocument();
-
-    const [addedFirstTaskRemoveButton] = screen.getAllByTestId('remove-task-button');
-
-    fireEvent.click(addedFirstTaskRemoveButton);
-
-    expect(addedFirstTaskTitle).not.toBeInTheDocument();
-    expect(addedSecondTaskTitle).toBeInTheDocument();
-  })
-
-  it('should be able to check a task', () => {
-    render(<TaskList />);
-
-    const taskInput = screen.getByPlaceholderText('Adicionar novo todo');
-    const addTaskButton = screen.getByTestId('add-task-button');
-
-    fireEvent.change(taskInput, {
-      target: {
-        value: 'Desafio ReactJS Ignite'
-      }
-    });
-    fireEvent.click(addTaskButton);
-
-    fireEvent.change(taskInput, {
-      target: {
-        value: 'Beber água'
-      }
-    });
-    fireEvent.click(addTaskButton);
-
-    const [addedFirstTask, addedSecondTask] = screen.getAllByTestId('task');
-
-    if (addedFirstTask.firstChild) {
-      fireEvent.click(addedFirstTask.firstChild)
-    }
-
-    expect(addedFirstTask).toBeInTheDocument();
-    expect(addedFirstTask).toHaveClass('completed');
-
-    expect(addedSecondTask).toBeInTheDocument();
-    expect(addedSecondTask).not.toHaveClass('completed');
-  })
-})
+              <button type="button" data-testid="remove-task-button" onClick={() => handleRemoveTask(task.id)}>
+                <FiTrash size={16}/>
+              </button>
+            </li>
+          ))}
+          
+        </ul>
+      </main>
+    </section>
+  )
+}
